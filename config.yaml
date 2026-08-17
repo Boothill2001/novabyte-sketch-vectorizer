@@ -1,0 +1,60 @@
+presets:
+  jewelry_metal:
+    slic_n_segments: 200
+    slic_compactness: 25
+    bilateral_d: 15
+    bilateral_sigma_color: 75
+    bilateral_sigma_space: 75
+    canny_low: 40
+    canny_high: 120
+    quantize_k: 4
+    min_region_area: 100
+    anchor_ceiling: 20
+    merge_delta_e: 25.0
+    shadow_alpha_threshold: 240
+    gem_saturation_threshold: 80
+
+  jewelry_gem:
+    slic_n_segments: 400
+    slic_compactness: 15
+    bilateral_d: 9
+    bilateral_sigma_color: 50
+    bilateral_sigma_space: 50
+    canny_low: 40
+    canny_high: 120
+    quantize_k: 6
+    min_region_area: 50
+    anchor_ceiling: 25
+    merge_delta_e: 6.0
+    shadow_alpha_threshold: 240
+    gem_saturation_threshold: 60
+
+  footwear:
+    slic_n_segments: 500
+    slic_compactness: 25
+    bilateral_d: 12
+    bilateral_sigma_color: 65
+    bilateral_sigma_space: 65
+    canny_low: 35
+    canny_high: 110
+    quantize_k: 8
+    min_region_area: 120
+    anchor_ceiling: 22
+    merge_delta_e: 7.0
+    shadow_alpha_threshold: 240
+    gem_saturation_threshold: 100
+
+  default:
+    slic_n_segments: 350
+    slic_compactness: 20
+    bilateral_d: 12
+    bilateral_sigma_color: 60
+    bilateral_sigma_space: 60
+    canny_low: 35
+    canny_high: 110
+    quantize_k: 5
+    min_region_area: 80
+    anchor_ceiling: 22
+    merge_delta_e: 7.0
+    shadow_alpha_threshold: 240
+    gem_saturation_threshold: 80
