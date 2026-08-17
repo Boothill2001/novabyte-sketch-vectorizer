@@ -103,25 +103,28 @@ def _vectorize_color(color_raster: np.ndarray, silhouette: np.ndarray,
 
 
 def _contour_to_bezier_path(contour: np.ndarray, closed: bool = False) -> str:
-    pts = contour.reshape(-1, 2)
-    if len(pts) < 2:
+    pts = contour.reshape(-1, 2).astype(float)
+    n = len(pts)
+    if n < 2:
         return ""
 
-    d = f"M {pts[0][0]},{pts[0][1]}"
+    if n == 2:
+        return f"M {pts[0][0]:.1f},{pts[0][1]:.1f} L {pts[1][0]:.1f},{pts[1][1]:.1f}"
 
-    i = 1
-    while i < len(pts):
-        if i + 2 < len(pts):
-            d += f" C {pts[i][0]},{pts[i][1]} {pts[i+1][0]},{pts[i+1][1]} {pts[i+2][0]},{pts[i+2][1]}"
-            i += 3
-        elif i + 1 < len(pts):
-            mid_x = (pts[i][0] + pts[i+1][0]) / 2
-            mid_y = (pts[i][1] + pts[i+1][1]) / 2
-            d += f" Q {pts[i][0]},{pts[i][1]} {pts[i+1][0]},{pts[i+1][1]}"
-            i += 2
-        else:
-            d += f" L {pts[i][0]},{pts[i][1]}"
-            i += 1
+    d = f"M {pts[0][0]:.1f},{pts[0][1]:.1f}"
+
+    for i in range(n - 1):
+        p0 = pts[(i - 1) % n] if (closed or i > 0) else pts[0]
+        p1 = pts[i]
+        p2 = pts[i + 1]
+        p3 = pts[(i + 2) % n] if (closed or i + 2 < n) else pts[n - 1]
+
+        cp1x = p1[0] + (p2[0] - p0[0]) / 6.0
+        cp1y = p1[1] + (p2[1] - p0[1]) / 6.0
+        cp2x = p2[0] - (p3[0] - p1[0]) / 6.0
+        cp2y = p2[1] - (p3[1] - p1[1]) / 6.0
+
+        d += f" C {cp1x:.1f},{cp1y:.1f} {cp2x:.1f},{cp2y:.1f} {p2[0]:.1f},{p2[1]:.1f}"
 
     if closed:
         d += " Z"

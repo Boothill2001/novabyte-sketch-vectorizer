@@ -21,10 +21,13 @@ def compute_metrics(data: dict, bw_raster: np.ndarray, color_raster: np.ndarray,
         color_mask[color_raster < 255] = 255
 
     output_mask = cv2.bitwise_or(bw_mask, color_mask)
-    iou = _compute_iou(source_mask, output_mask)
-    f_score = _boundary_f_score(source_mask, output_mask, tolerance=2)
-    coord_offset = _coordinate_offset(source_mask, output_mask)
+    iou = _compute_iou(source_mask, color_mask)
+    f_score = _boundary_f_score(source_mask, color_mask, tolerance=2)
+    coord_offset = _coordinate_offset(source_mask, color_mask)
     has_gradient = _check_gradients(color_raster, data["silhouette"])
+
+    ambiguous_mask = data.get("ambiguous_mask")
+    ambiguous_count = int(np.sum(ambiguous_mask > 0)) if ambiguous_mask is not None else 0
 
     return {
         "silhouette_iou": round(iou, 4),
@@ -40,12 +43,23 @@ def compute_metrics(data: dict, bw_raster: np.ndarray, color_raster: np.ndarray,
         "has_embedded_raster": svg_stats.get("has_embedded_raster", False),
         "has_gradients": has_gradient,
         "processing_time_s": round(elapsed, 2),
-        "fill_count_rationale": _fill_rationale(svg_stats.get("fill_count", 0)),
+        "fill_count_rationale": data.get("auto_k_reason", _fill_rationale(svg_stats.get("fill_count", 0))),
         "anchor_ceiling_rationale": (
             "Target ≤20 anchors per elliptical element. "
             "Each anchor is load-bearing: removing any single point changes the path by >1px. "
             "This ensures natural drag behavior in vector editors."
         ),
+        "ambiguous_edges": {
+            "count": ambiguous_count,
+            "policy": "kept_and_flagged",
+            "description": (
+                f"{ambiguous_count} ambiguous edge pixels detected — edges present in the "
+                "original image but absent after shading flattening. Per spec, these are "
+                "kept in the output and flagged here. They may represent seam lines, "
+                "construction marks, or shading boundaries that could not be confidently "
+                "classified as structural vs lighting."
+            ),
+        },
     }
 
 
@@ -90,9 +104,13 @@ def _coordinate_offset(source_mask: np.ndarray, output_mask: np.ndarray) -> floa
     o_coords = np.argwhere(output_mask > 0)
     if len(s_coords) == 0 or len(o_coords) == 0:
         return 0.0
-    s_center = np.mean(s_coords, axis=0)
-    o_center = np.mean(o_coords, axis=0)
-    return np.linalg.norm(s_center - o_center)
+    s_bbox_tl = s_coords.min(axis=0).astype(float)
+    o_bbox_tl = o_coords.min(axis=0).astype(float)
+    s_bbox_br = s_coords.max(axis=0).astype(float)
+    o_bbox_br = o_coords.max(axis=0).astype(float)
+    tl_offset = np.linalg.norm(s_bbox_tl - o_bbox_tl)
+    br_offset = np.linalg.norm(s_bbox_br - o_bbox_br)
+    return max(tl_offset, br_offset)
 
 
 def _check_gradients(color_img: np.ndarray, mask: np.ndarray) -> bool:

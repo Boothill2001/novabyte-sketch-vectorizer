@@ -35,7 +35,8 @@ def process_single(image_path: Path, output_dir: Path, config: dict) -> dict:
     start = time.time()
 
     data = preprocess(str(image_path), config)
-    bw_raster = generate_bw_sketch(data, config)
+    bw_raster, ambiguous_mask = generate_bw_sketch(data, config)
+    data["ambiguous_mask"] = ambiguous_mask
     color_raster = generate_flat_color(data, config)
     svg_content, stats = vectorize(bw_raster, color_raster, data, config)
     elapsed = time.time() - start

@@ -1,0 +1,292 @@
+<meta charset="utf-8">
+<title>NovaByte Sketch Vectorizer</title>
+<style>
+:root {
+  --bg: #0f1117;
+  --card: #1a1d27;
+  --border: #2a2d3a;
+  --text: #e4e4e7;
+  --text2: #9ca3af;
+  --accent: #6366f1;
+  --accent2: #818cf8;
+  --green: #22c55e;
+  --red: #ef4444;
+  --yellow: #eab308;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:'Segoe UI',system-ui,sans-serif; }
+.header { padding:24px 32px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:16px; }
+.header h1 { font-size:22px; font-weight:600; }
+.header .badge { background:var(--accent); color:#fff; padding:4px 12px; border-radius:12px; font-size:12px; }
+.container { max-width:1400px; margin:0 auto; padding:24px 32px; }
+
+/* Gallery */
+.gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:16px; margin-bottom:32px; }
+.gallery-item { background:var(--card); border:2px solid var(--border); border-radius:12px; cursor:pointer; overflow:hidden; transition:all .2s; }
+.gallery-item:hover, .gallery-item.active { border-color:var(--accent); transform:translateY(-2px); }
+.gallery-item img { width:100%; height:140px; object-fit:contain; background:#fff; padding:8px; }
+.gallery-item .info { padding:10px 12px; }
+.gallery-item .name { font-size:13px; font-weight:600; }
+.gallery-item .iou { font-size:11px; color:var(--text2); margin-top:4px; }
+.gallery-item .iou .pass { color:var(--green); }
+.gallery-item .iou .fail { color:var(--red); }
+
+/* Detail View */
+.detail { display:none; }
+.detail.visible { display:block; }
+.detail-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+.detail-header h2 { font-size:20px; }
+.back-btn { background:var(--card); border:1px solid var(--border); color:var(--text); padding:8px 16px; border-radius:8px; cursor:pointer; font-size:13px; }
+.back-btn:hover { border-color:var(--accent); }
+
+/* Tabs */
+.tabs { display:flex; gap:8px; margin-bottom:20px; }
+.tab { background:var(--card); border:1px solid var(--border); color:var(--text2); padding:8px 20px; border-radius:8px; cursor:pointer; font-size:13px; transition:all .15s; }
+.tab:hover { border-color:var(--accent); }
+.tab.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+
+/* Comparison */
+.comparison { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+.comparison .panel { background:var(--card); border-radius:12px; overflow:hidden; }
+.comparison .panel-title { padding:12px 16px; font-size:13px; font-weight:600; border-bottom:1px solid var(--border); text-align:center; }
+.comparison .panel img { width:100%; height:auto; background:#fff; display:block; }
+
+/* SVG Viewer */
+.svg-viewer { background:var(--card); border-radius:12px; padding:20px; }
+.svg-controls { display:flex; gap:12px; margin-bottom:16px; }
+.svg-controls label { display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer; }
+.svg-controls input[type=checkbox] { accent-color:var(--accent); }
+.svg-canvas { background:#fff; border-radius:8px; overflow:auto; max-height:600px; }
+.svg-canvas svg { width:100%; height:auto; }
+
+/* Before/After Slider */
+.slider-container { position:relative; background:var(--card); border-radius:12px; overflow:hidden; cursor:ew-resize; user-select:none; }
+.slider-container img { width:100%; display:block; }
+.slider-overlay { position:absolute; top:0; left:0; height:100%; overflow:hidden; border-right:3px solid var(--accent); }
+.slider-overlay img { height:100%; width:auto; min-width:100%; max-width:none; object-fit:cover; }
+.slider-label { position:absolute; bottom:12px; padding:4px 12px; background:rgba(0,0,0,.7); color:#fff; font-size:12px; border-radius:4px; }
+.slider-label.left { left:12px; }
+.slider-label.right { right:12px; }
+
+/* Metrics Table */
+.metrics-table { width:100%; border-collapse:collapse; background:var(--card); border-radius:12px; overflow:hidden; }
+.metrics-table th { padding:12px 16px; text-align:left; font-size:12px; color:var(--text2); background:var(--border); font-weight:600; }
+.metrics-table td { padding:10px 16px; font-size:13px; border-bottom:1px solid var(--border); }
+.metrics-table tr:last-child td { border-bottom:none; }
+.metrics-table .pass { color:var(--green); font-weight:600; }
+.metrics-table .fail { color:var(--red); font-weight:600; }
+.metrics-table .warn { color:var(--yellow); font-weight:600; }
+
+/* Aggregate Metrics */
+.agg-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; margin-bottom:24px; }
+.agg-card { background:var(--card); border-radius:12px; padding:20px; border:1px solid var(--border); }
+.agg-card .label { font-size:12px; color:var(--text2); margin-bottom:4px; }
+.agg-card .value { font-size:28px; font-weight:700; }
+.agg-card .value.pass { color:var(--green); }
+
+.tab-content { display:none; }
+.tab-content.visible { display:block; }
+</style>
+
+<div class="header">
+  <h1>Flat Sketch Vectorizer</h1>
+  <span class="badge">NovaByte Technical Test</span>
+</div>
+
+<div class="container">
+  <div id="gallery-view">
+    <div class="agg-grid" id="agg-grid"></div>
+    <h3 style="margin-bottom:16px;font-size:15px;">Processed Images</h3>
+    <div class="gallery" id="gallery"></div>
+  </div>
+
+  <div class="detail" id="detail-view">
+    <div class="detail-header">
+      <h2 id="detail-title"></h2>
+      <button class="back-btn" onclick="showGallery()">← Back to Gallery</button>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="compare" onclick="switchTab(this)">Comparison</div>
+      <div class="tab" data-tab="slider" onclick="switchTab(this)">Before / After</div>
+      <div class="tab" data-tab="svg" onclick="switchTab(this)">SVG Viewer</div>
+      <div class="tab" data-tab="metrics" onclick="switchTab(this)">Metrics</div>
+    </div>
+
+    <div class="tab-content visible" id="tab-compare">
+      <div class="comparison">
+        <div class="panel">
+          <div class="panel-title">Source</div>
+          <img id="img-source" />
+        </div>
+        <div class="panel">
+          <div class="panel-title">B&W Sketch</div>
+          <img id="img-bw" />
+        </div>
+        <div class="panel">
+          <div class="panel-title">Flat Color</div>
+          <img id="img-color" />
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-slider">
+      <div class="slider-container" id="slider" onmousemove="handleSlider(event)" ontouchmove="handleSliderTouch(event)">
+        <img id="slider-base" />
+        <div class="slider-overlay" id="slider-overlay">
+          <img id="slider-top" />
+        </div>
+        <span class="slider-label left">Flat Color</span>
+        <span class="slider-label right">Source</span>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-svg">
+      <div class="svg-viewer">
+        <div class="svg-controls">
+          <label><input type="checkbox" id="toggle-bw" checked onchange="toggleSvgLayer('bw_sketch',this.checked)"> B&W Sketch</label>
+          <label><input type="checkbox" id="toggle-color" checked onchange="toggleSvgLayer('color_sketch',this.checked)"> Color Sketch</label>
+        </div>
+        <div class="svg-canvas" id="svg-canvas"></div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-metrics">
+      <div id="metrics-detail"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let allImages = [];
+let currentImage = null;
+
+async function init() {
+  const res = await fetch('/api/images');
+  allImages = await res.json();
+  renderAggregates();
+  renderGallery();
+}
+
+function renderAggregates() {
+  const grid = document.getElementById('agg-grid');
+  const n = allImages.length;
+  const avgIou = allImages.reduce((s,i) => s + i.metrics.silhouette_iou, 0) / n;
+  const avgTime = allImages.reduce((s,i) => s + i.metrics.processing_time_s, 0) / n;
+  const totalAnchors = allImages.reduce((s,i) => s + i.metrics.total_anchors, 0);
+  const passCount = allImages.filter(i => i.metrics.silhouette_iou >= 0.97).length;
+
+  grid.innerHTML = `
+    <div class="agg-card"><div class="label">Images Processed</div><div class="value">${n}</div></div>
+    <div class="agg-card"><div class="label">Avg Silhouette IoU</div><div class="value pass">${avgIou.toFixed(4)}</div></div>
+    <div class="agg-card"><div class="label">Avg Processing Time</div><div class="value">${avgTime.toFixed(1)}s</div></div>
+    <div class="agg-card"><div class="label">Pass Rate (IoU ≥ 0.97)</div><div class="value pass">${passCount}/${n}</div></div>
+  `;
+}
+
+function renderGallery() {
+  const gallery = document.getElementById('gallery');
+  gallery.innerHTML = allImages.map(img => `
+    <div class="gallery-item" onclick="showDetail('${img.name}')">
+      <img src="/output/${img.name}/flat_color.png" onerror="this.src='/input/${img.name}.png'" />
+      <div class="info">
+        <div class="name">${img.name}</div>
+        <div class="iou">IoU: <span class="${img.metrics.silhouette_iou >= 0.97 ? 'pass' : 'fail'}">${img.metrics.silhouette_iou.toFixed(4)}</span> |${img.metrics.fill_count} fills</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function showDetail(name) {
+  currentImage = allImages.find(i => i.name === name);
+  document.getElementById('gallery-view').style.display = 'none';
+  document.getElementById('detail-view').classList.add('visible');
+  document.getElementById('detail-title').textContent = name;
+
+  document.getElementById('img-source').src = `/input/${name}.png`;
+  document.getElementById('img-bw').src = `/output/${name}/bw_sketch.png`;
+  document.getElementById('img-color').src = `/output/${name}/flat_color.png`;
+  document.getElementById('slider-base').src = `/input/${name}.png`;
+  document.getElementById('slider-top').src = `/output/${name}/flat_color.png`;
+  document.getElementById('slider-overlay').style.width = '50%';
+
+  const res = await fetch(`/api/image/${name}`);
+  const data = await res.json();
+  if (data.svg) {
+    document.getElementById('svg-canvas').innerHTML = data.svg;
+    document.getElementById('toggle-bw').checked = true;
+    document.getElementById('toggle-color').checked = true;
+  }
+
+  renderMetricsDetail(currentImage.metrics);
+  switchTab(document.querySelector('.tab[data-tab="compare"]'));
+}
+
+function showGallery() {
+  document.getElementById('gallery-view').style.display = 'block';
+  document.getElementById('detail-view').classList.remove('visible');
+}
+
+function switchTab(el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('visible'));
+  el.classList.add('active');
+  document.getElementById('tab-' + el.dataset.tab).classList.add('visible');
+}
+
+function handleSlider(e) {
+  const rect = e.currentTarget.getBoundingClientRect();
+  const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  document.getElementById('slider-overlay').style.width = (x * 100) + '%';
+}
+
+function handleSliderTouch(e) {
+  e.preventDefault();
+  const rect = e.currentTarget.getBoundingClientRect();
+  const x = Math.max(0, Math.min(1, (e.touches[0].clientX - rect.left) / rect.width));
+  document.getElementById('slider-overlay').style.width = (x * 100) + '%';
+}
+
+function toggleSvgLayer(id, visible) {
+  const g = document.getElementById(id);
+  if (g) g.style.display = visible ? 'inline' : 'none';
+}
+
+function renderMetricsDetail(m) {
+  const fmt = (v, target, op) => {
+    const pass = op === '>=' ? v >= target : op === '<=' ? v <= target : v === target;
+    return `<span class="${pass ? 'pass' : 'fail'}">${typeof v === 'number' ? (Number.isInteger(v) ? v : v.toFixed(4)) : v}</span>`;
+  };
+
+  const amb = m.ambiguous_edges || {};
+  document.getElementById('metrics-detail').innerHTML = `
+    <table class="metrics-table">
+      <tr><th>Metric</th><th>Value</th><th>Target</th><th>Status</th></tr>
+      <tr><td>Silhouette IoU</td><td>${m.silhouette_iou.toFixed(4)}</td><td>≥ 0.97</td><td>${fmt(m.silhouette_iou, 0.97, '>=')}</td></tr>
+      <tr><td>Boundary F-score (2px)</td><td>${m.boundary_f_score.toFixed(4)}</td><td>≥ 0.95</td><td>${fmt(m.boundary_f_score, 0.95, '>=')}</td></tr>
+      <tr><td>Coordinate Offset</td><td>${m.coordinate_offset_px.toFixed(2)} px</td><td>≤ 1 px</td><td>${fmt(m.coordinate_offset_px, 1, '<=')}</td></tr>
+      <tr><td>Distinct Fills</td><td>${m.fill_count}</td><td>report + rationale</td><td><span class="pass">✓</span></td></tr>
+      <tr><td>Total Anchors</td><td>${m.total_anchors}</td><td>ceiling justified</td><td><span class="pass">✓</span></td></tr>
+      <tr><td>Gradients in Flat Color</td><td>${m.has_gradients ? 'Yes' : 'None'}</td><td>0</td><td>${fmt(m.has_gradients ? 1 : 0, 0, '==')}</td></tr>
+      <tr><td>Open Paths in SVG</td><td>${m.has_open_paths ? 'Yes' : 'None'}</td><td>0</td><td>${fmt(m.has_open_paths ? 1 : 0, 0, '==')}</td></tr>
+      <tr><td>Embedded Raster in SVG</td><td>${m.has_embedded_raster ? 'Yes' : 'None'}</td><td>0</td><td>${fmt(m.has_embedded_raster ? 1 : 0, 0, '==')}</td></tr>
+      <tr><td>Processing Time</td><td>${m.processing_time_s.toFixed(2)}s</td><td>report</td><td><span class="pass">✓</span></td></tr>
+      <tr><td>Ambiguous Edges</td><td>${amb.count || 0} pixels flagged</td><td>keep + flag</td><td><span class="pass">✓ ${amb.policy || ''}</span></td></tr>
+    </table>
+    <div style="margin-top:16px;padding:16px;background:var(--card);border-radius:12px;border:1px solid var(--border);">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">Fill Count Rationale</div>
+      <div style="font-size:13px;">${m.fill_count_rationale}</div>
+    </div>
+    <div style="margin-top:12px;padding:16px;background:var(--card);border-radius:12px;border:1px solid var(--border);">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">Anchor Ceiling Rationale</div>
+      <div style="font-size:13px;">${m.anchor_ceiling_rationale}</div>
+    </div>
+    ${amb.description ? `<div style="margin-top:12px;padding:16px;background:var(--card);border-radius:12px;border:1px solid var(--border);">
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">Ambiguous Edge Report</div>
+      <div style="font-size:13px;">${amb.description}</div>
+    </div>` : ''}
+  `;
+}
+
+init();
+</script>

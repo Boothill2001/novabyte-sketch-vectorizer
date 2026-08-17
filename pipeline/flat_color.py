@@ -26,7 +26,11 @@ def generate_flat_color(data: dict, config: dict) -> np.ndarray:
         delta_e_thresh=config.get("merge_delta_e", 7.0)
     )
 
-    k = config.get("quantize_k", 5)
+    auto_k = _auto_detect_k(data["bgr"], silhouette)
+    k = max(auto_k, config.get("quantize_k", 5))
+    data["detected_k"] = k
+    data["auto_k_reason"] = _generate_k_rationale(data["bgr"], silhouette, auto_k)
+
     valid_means = sp_means[~np.all(sp_means == 0, axis=1)]
     if len(valid_means) <= k:
         cluster_centers = valid_means
@@ -185,3 +189,65 @@ def _fill_small_holes(img: np.ndarray, mask: np.ndarray, min_area: int) -> np.nd
                 result[region] = fill_color
 
     return result
+
+
+def _auto_detect_k(bgr: np.ndarray, mask: np.ndarray) -> int:
+    hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+    fg_hsv = hsv[mask > 0]
+    if len(fg_hsv) == 0:
+        return 3
+
+    saturated = fg_hsv[fg_hsv[:, 1] > 40]
+    neutral = fg_hsv[fg_hsv[:, 1] <= 40]
+
+    n_neutral_groups = 1 if len(neutral) > len(fg_hsv) * 0.1 else 0
+
+    if len(saturated) < len(fg_hsv) * 0.05:
+        return max(3, n_neutral_groups + 2)
+
+    hues = saturated[:, 0].astype(np.float64)
+    hist, _ = np.histogram(hues, bins=36, range=(0, 180))
+    smoothed = np.convolve(hist, [0.25, 0.5, 0.25], mode="same")
+    threshold = max(np.max(smoothed) * 0.1, len(saturated) * 0.02)
+
+    peaks = []
+    for i in range(1, len(smoothed) - 1):
+        if smoothed[i] > smoothed[i-1] and smoothed[i] > smoothed[i+1] and smoothed[i] > threshold:
+            peaks.append(i)
+
+    if len(peaks) == 0 and np.max(smoothed) > threshold:
+        peaks = [np.argmax(smoothed)]
+
+    k = n_neutral_groups + max(1, len(peaks)) + 1
+    return max(3, min(k, 10))
+
+
+def _generate_k_rationale(bgr: np.ndarray, mask: np.ndarray, k: int) -> str:
+    hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+    fg_hsv = hsv[mask > 0]
+    if len(fg_hsv) == 0:
+        return f"{k} fills: default for undetected content."
+
+    saturated_ratio = np.sum(fg_hsv[:, 1] > 40) / len(fg_hsv)
+    materials = []
+    saturated = fg_hsv[fg_hsv[:, 1] > 40]
+    if len(saturated) > 0:
+        hues = saturated[:, 0]
+        if np.any((hues < 15) | (hues > 165)):
+            materials.append("red/pink")
+        if np.any((hues >= 15) & (hues < 35)):
+            materials.append("gold/yellow")
+        if np.any((hues >= 35) & (hues < 85)):
+            materials.append("green")
+        if np.any((hues >= 85) & (hues < 130)):
+            materials.append("blue/teal")
+        if np.any((hues >= 130) & (hues <= 165)):
+            materials.append("purple/violet")
+
+    neutral_ratio = np.sum(fg_hsv[:, 1] <= 40) / len(fg_hsv)
+    if neutral_ratio > 0.1:
+        materials.append("neutral metal")
+
+    mat_str = ", ".join(materials) if materials else "mixed materials"
+    return (f"{k} fills chosen from image analysis: detected {mat_str}. "
+            f"Saturated pixels: {saturated_ratio:.0%} of foreground.")
